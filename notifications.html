@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - CarCare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .hero-bg {
+            background: linear-gradient(135deg, #0A2342 0%, #1a3a5f 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item.active {
+            color: #D72638;
+        }
+        
+        .nav-item:not(.active) {
+            color: #6b7280;
+        }
+        
+        .notification-item {
+            transition: all 0.2s ease;
+        }
+        
+        .notification-item:active {
+            transform: scale(0.98);
+        }
+        
+        .notification-item.unread {
+            background-color: #fef2f2;
+            border-left: 4px solid #D72638;
+        }
+        
+        .notification-item.read {
+            background-color: #f9fafb;
+            border-left: 4px solid #e5e7eb;
+        }
+        
+        .filter-tab {
+            transition: all 0.2s ease;
+        }
+        
+        .filter-tab.active {
+            background-color: #D72638;
+            color: white;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #2ECC71;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 pb-16">
+    <!-- Header -->
+    <div class="hero-bg text-white px-4 py-6">
+        <div class="flex items-center justify-between mb-4">
+            <button onclick="goBack()" class="p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            <h1 class="text-xl font-bold">Notifications</h1>
+            <button onclick="markAllAsRead()" class="text-blue-200 text-sm">
+                Mark All Read
+            </button>
+        </div>
+        
+        <div class="text-center">
+            <div class="text-2xl font-bold mb-1" id="unread-count">3</div>
+            <p class="text-blue-100">Unread Notifications</p>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="px-4 py-4">
+        <div class="flex space-x-2">
+            <button class="filter-tab active px-4 py-2 rounded-lg text-sm font-medium" onclick="filterNotifications('all')">All</button>
+            <button class="filter-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium" onclick="filterNotifications('reminders')">Reminders</button>
+            <button class="filter-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium" onclick="filterNotifications('bookings')">Bookings</button>
+            <button class="filter-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium" onclick="filterNotifications('promotions')">Promotions</button>
+        </div>
+    </div>
+
+    <!-- Notification Settings -->
+    <div class="px-4 mb-6">
+        <div class="bg-white rounded-lg card-shadow p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification Settings</h3>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-gray-800">Service Reminders</div>
+                        <div class="text-sm text-gray-500">Oil changes, maintenance, etc.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked onchange="toggleSetting('reminders', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-gray-800">Booking Updates</div>
+                        <div class="text-sm text-gray-500">Confirmations, reminders, changes</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked onchange="toggleSetting('bookings', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-gray-800">Promotional Offers</div>
+                        <div class="text-sm text-gray-500">Discounts and special deals</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" onchange="toggleSetting('promotions', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-medium text-gray-800">Push Notifications</div>
+                        <div class="text-sm text-gray-500">Allow push notifications</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" checked onchange="toggleSetting('push', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="px-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">Recent Notifications</h3>
+            <button onclick="clearAllNotifications()" class="text-red-600 text-sm font-medium">
+                Clear All
+            </button>
+        </div>
+        
+        <div id="notifications-list" class="space-y-3">
+            <!-- Notifications will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="nav-bar">
+        <div class="flex items-center justify-around py-2">
+            <a href="index.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="booking.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-xs">Book</span>
+            </a>
+            <a href="locator.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span class="text-xs">Locator</span>
+            </a>
+            <a href="expenses.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+                <span class="text-xs">Expenses</span>
+            </a>
+            <a href="notifications.html" class="nav-item active flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM11 19H6.5A2.5 2.5 0 014 16.5v-9A2.5 2.5 0 016.5 5h11A2.5 2.5 0 0120 7.5v3.5"></path>
+                </svg>
+                <span class="text-xs">Alerts</span>
+            </a>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+    <script>
+        let currentFilter = 'all';
+        let notificationSettings = {
+            reminders: true,
+            bookings: true,
+            promotions: false,
+            push: true
+        };
+
+        const notifications = [
+            {
+                id: 1,
+                type: 'reminder',
+                title: 'Oil Change Due',
+                message: 'Your BMW 3 Series is overdue for an oil change by 500 miles',
+                time: '2 hours ago',
+                read: false,
+                icon: '🛢️',
+                action: 'book_service'
+            },
+            {
+                id: 2,
+                type: 'booking',
+                title: 'Car Wash Confirmed',
+                message: 'Your appointment at AutoShine Center for tomorrow at 2:00 PM is confirmed',
+                time: '1 day ago',
+                read: false,
+                icon: '🚗',
+                action: 'view_booking'
+            },
+            {
+                id: 3,
+                type: 'reminder',
+                title: 'Insurance Renewal',
+                message: 'Your car insurance expires in 15 days. Time to renew your policy.',
+                time: '2 days ago',
+                read: false,
+                icon: '🛡️',
+                action: 'renew_insurance'
+            },
+            {
+                id: 4,
+                type: 'promotion',
+                title: 'Special Offer - 20% Off',
+                message: 'Get 20% off on full car detailing at Premium Auto Care this weekend!',
+                time: '3 days ago',
+                read: true,
+                icon: '🎉',
+                action: 'view_offer'
+            },
+            {
+                id: 5,
+                type: 'booking',
+                title: 'Service Completed',
+                message: 'Your tire rotation service has been completed. Your car is ready for pickup.',
+                time: '1 week ago',
+                read: true,
+                icon: '✅',
+                action: 'rate_service'
+            },
+            {
+                id: 6,
+                type: 'reminder',
+                title: 'Tire Pressure Check',
+                message: 'Time to check your tire pressure. Low pressure detected in rear left tire.',
+                time: '1 week ago',
+                read: true,
+                icon: '🛞',
+                action: 'check_tires'
+            }
+        ];
+
+        function filterNotifications(filter) {
+            currentFilter = filter;
+            
+            // Update filter tabs
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            event.target.classList.add('active');
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            
+            updateNotificationsList();
+        }
+
+        function updateNotificationsList() {
+            const container = document.getElementById('notifications-list');
+            container.innerHTML = '';
+            
+            let filteredNotifications = notifications;
+            
+            if (currentFilter !== 'all') {
+                filteredNotifications = notifications.filter(notification => notification.type === currentFilter);
+            }
+            
+            filteredNotifications.forEach(notification => {
+                const notificationItem = document.createElement('div');
+                notificationItem.className = `notification-item ${notification.read ? 'read' : 'unread'} bg-white rounded-lg card-shadow p-4 cursor-pointer`;
+                notificationItem.onclick = () => handleNotificationClick(notification);
+                
+                notificationItem.innerHTML = `
+                    <div class="flex items-start space-x-4">
+                        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-lg">
+                            ${notification.icon}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-1">
+                                <h4 class="font-semibold text-gray-800 text-sm">${notification.title}</h4>
+                                <span class="text-xs text-gray-500">${notification.time}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">${notification.message}</p>
+                            <div class="flex items-center space-x-2">
+                                ${getActionButton(notification)}
+                                <button onclick="markAsRead(${notification.id})" class="text-xs text-blue-600 font-medium">
+                                    ${notification.read ? 'Mark Unread' : 'Mark Read'}
+                                </button>
+                            </div>
+                        </div>
+                        ${!notification.read ? '<div class="w-2 h-2 bg-red-500 rounded-full"></div>' : ''}
+                    </div>
+                `;
+                
+                container.appendChild(notificationItem);
+            });
+            
+            // Animate notification items
+            setTimeout(() => {
+                Animations.staggerCards('.notification-item');
+            }, 100);
+        }
+
+        function getActionButton(notification) {
+            const actions = {
+                'book_service': '<button class="bg-red-600 text-white px-3 py-1 rounded text-xs font-medium">Book Now</button>',
+                'view_booking': '<button class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium">View Booking</button>',
+                'renew_insurance': '<button class="bg-green-600 text-white px-3 py-1 rounded text-xs font-medium">Renew Now</button>',
+                'view_offer': '<button class="bg-purple-600 text-white px-3 py-1 rounded text-xs font-medium">View Offer</button>',
+                'rate_service': '<button class="bg-yellow-600 text-white px-3 py-1 rounded text-xs font-medium">Rate Service</button>',
+                'check_tires': '<button class="bg-gray-600 text-white px-3 py-1 rounded text-xs font-medium">Check Tires</button>'
+            };
+            
+            return actions[notification.action] || '';
+        }
+
+        function handleNotificationClick(notification) {
+            // Mark as read
+            if (!notification.read) {
+                markAsRead(notification.id);
+            }
+            
+            // Handle action
+            switch (notification.action) {
+                case 'book_service':
+                    window.location.href = 'booking.html';
+                    break;
+                case 'view_booking':
+                    Utils.showToast('Viewing booking details...', 'info');
+                    break;
+                case 'renew_insurance':
+                    Utils.showToast('Opening insurance renewal...', 'info');
+                    break;
+                case 'view_offer':
+                    Utils.showToast('Showing special offer...', 'info');
+                    break;
+                case 'rate_service':
+                    Utils.showToast('Opening rating form...', 'info');
+                    break;
+                case 'check_tires':
+                    Utils.showToast('Checking tire pressure...', 'info');
+                    break;
+                default:
+                    Utils.showToast('Notification details...', 'info');
+            }
+        }
+
+        function markAsRead(notificationId) {
+            const notification = notifications.find(n => n.id === notificationId);
+            if (notification) {
+                notification.read = !notification.read;
+                updateNotificationsList();
+                updateUnreadCount();
+                
+                Utils.showToast(
+                    notification.read ? 'Marked as read' : 'Marked as unread', 
+                    'info'
+                );
+            }
+        }
+
+        function markAllAsRead() {
+            notifications.forEach(notification => {
+                notification.read = true;
+            });
+            
+            updateNotificationsList();
+            updateUnreadCount();
+            Utils.showToast('All notifications marked as read', 'success');
+        }
+
+        function clearAllNotifications() {
+            if (confirm('Are you sure you want to clear all notifications?')) {
+                notifications.length = 0;
+                updateNotificationsList();
+                updateUnreadCount();
+                Utils.showToast('All notifications cleared', 'success');
+            }
+        }
+
+        function updateUnreadCount() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+            document.getElementById('unread-count').textContent = unreadCount;
+        }
+
+        function toggleSetting(setting, enabled) {
+            notificationSettings[setting] = enabled;
+            
+            const settingNames = {
+                'reminders': 'Service Reminders',
+                'bookings': 'Booking Updates',
+                'promotions': 'Promotional Offers',
+                'push': 'Push Notifications'
+            };
+            
+            Utils.showToast(
+                `${settingNames[setting]} ${enabled ? 'enabled' : 'disabled'}`, 
+                'info'
+            );
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNotificationsList();
+            updateUnreadCount();
+            
+            // Request notification permission (in a real app)
+            if ('Notification' in window && Notification.permission === 'default') {
+                setTimeout(() => {
+                    if (confirm('Enable push notifications for CarCare updates?')) {
+                        Notification.requestPermission();
+                    }
+                }, 2000);
+            }
+        });
+
+        // Simulate receiving a new notification (for demo purposes)
+        setTimeout(() => {
+            const newNotification = {
+                id: Date.now(),
+                type: 'reminder',
+                title: 'New Service Reminder',
+                message: 'Your vehicle inspection is due next month. Schedule your appointment early!',
+                time: 'Just now',
+                read: false,
+                icon: '📋',
+                action: 'book_service'
+            };
+            
+            notifications.unshift(newNotification);
+            updateNotificationsList();
+            updateUnreadCount();
+            
+            Utils.showToast('New notification received!', 'info');
+        }, 5000);
+    </script>
+</body>
+</html>

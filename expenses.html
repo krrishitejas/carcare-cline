@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - CarCare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .hero-bg {
+            background: linear-gradient(135deg, #0A2342 0%, #1a3a5f 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item.active {
+            color: #D72638;
+        }
+        
+        .nav-item:not(.active) {
+            color: #6b7280;
+        }
+        
+        .expense-chart {
+            height: 250px;
+        }
+        
+        .trend-chart {
+            height: 200px;
+        }
+        
+        .category-card {
+            transition: all 0.2s ease;
+        }
+        
+        .category-card:active {
+            transform: scale(0.98);
+        }
+        
+        .expense-item {
+            transition: all 0.2s ease;
+        }
+        
+        .expense-item:active {
+            transform: scale(0.98);
+        }
+        
+        .floating-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 50;
+        }
+        
+        .period-selector {
+            transition: all 0.2s ease;
+        }
+        
+        .period-selector.active {
+            background-color: #D72638;
+            color: white;
+        }
+        
+        .filter-chip {
+            transition: all 0.2s ease;
+        }
+        
+        .filter-chip.active {
+            background-color: #D72638;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 pb-16">
+    <!-- Header -->
+    <div class="hero-bg text-white px-4 py-6">
+        <div class="flex items-center justify-between mb-4">
+            <button onclick="goBack()" class="p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            <h1 class="text-xl font-bold">Expense Tracker</h1>
+            <button onclick="exportData()" class="p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="text-center">
+            <div class="text-3xl font-bold mb-1">$520.50</div>
+            <p class="text-blue-100">This Month's Total</p>
+        </div>
+    </div>
+
+    <!-- Period Selector -->
+    <div class="px-4 py-4">
+        <div class="flex space-x-2">
+            <button class="period-selector bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium" onclick="changePeriod('week')">Week</button>
+            <button class="period-selector active px-4 py-2 rounded-lg text-sm font-medium" onclick="changePeriod('month')">Month</button>
+            <button class="period-selector bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium" onclick="changePeriod('year')">Year</button>
+        </div>
+    </div>
+
+    <!-- Expense Overview Chart -->
+    <div class="px-4 mb-6">
+        <div class="bg-white rounded-lg card-shadow p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Spending Overview</h3>
+            <div class="expense-chart" id="overview-chart"></div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="px-4 mb-6">
+        <div class="bg-white rounded-lg card-shadow p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Category Breakdown</h3>
+                <button onclick="toggleCategoryView()" class="text-red-600 text-sm font-medium">View All</button>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3" id="category-grid">
+                <div class="category-card bg-red-50 p-4 rounded-lg cursor-pointer" onclick="filterByCategory('fuel')">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-2xl">⛽</div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-gray-800">$245</div>
+                            <div class="text-xs text-gray-500">47%</div>
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium text-gray-700">Fuel</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-red-500 h-2 rounded-full" style="width: 47%"></div>
+                    </div>
+                </div>
+                
+                <div class="category-card bg-blue-50 p-4 rounded-lg cursor-pointer" onclick="filterByCategory('maintenance')">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-2xl">🔧</div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-gray-800">$180</div>
+                            <div class="text-xs text-gray-500">35%</div>
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium text-gray-700">Maintenance</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-blue-500 h-2 rounded-full" style="width: 35%"></div>
+                    </div>
+                </div>
+                
+                <div class="category-card bg-green-50 p-4 rounded-lg cursor-pointer" onclick="filterByCategory('insurance')">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-2xl">🛡️</div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-gray-800">$95</div>
+                            <div class="text-xs text-gray-500">18%</div>
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium text-gray-700">Insurance</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-green-500 h-2 rounded-full" style="width: 18%"></div>
+                    </div>
+                </div>
+                
+                <div class="category-card bg-purple-50 p-4 rounded-lg cursor-pointer" onclick="showAddExpenseModal()">
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <div class="text-3xl mb-2">+</div>
+                            <div class="text-sm font-medium text-gray-600">Add Expense</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spending Trend -->
+    <div class="px-4 mb-6">
+        <div class="bg-white rounded-lg card-shadow p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Spending Trend</h3>
+            <div class="trend-chart" id="trend-chart"></div>
+        </div>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="px-4 mb-4">
+        <div class="flex space-x-2 overflow-x-auto pb-2">
+            <button class="filter-chip active px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterExpenses('all')">All</button>
+            <button class="filter-chip bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterExpenses('fuel')">Fuel</button>
+            <button class="filter-chip bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterExpenses('maintenance')">Maintenance</button>
+            <button class="filter-chip bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterExpenses('insurance')">Insurance</button>
+            <button class="filter-chip bg-gray-200 text-gray-700 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap" onclick="filterExpenses('repairs')">Repairs</button>
+        </div>
+    </div>
+
+    <!-- Expense List -->
+    <div class="px-4 mb-6">
+        <div class="bg-white rounded-lg card-shadow">
+            <div class="p-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">Recent Expenses</h3>
+            </div>
+            
+            <div id="expense-list" class="divide-y divide-gray-200">
+                <!-- Expense items will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="floating-btn bg-red-600 text-white p-4 rounded-full shadow-lg" onclick="showAddExpenseModal()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+    </button>
+
+    <!-- Bottom Navigation -->
+    <div class="nav-bar">
+        <div class="flex items-center justify-around py-2">
+            <a href="index.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="text-xs">Home</span>
+            </a>
+            <a href="booking.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-xs">Book</span>
+            </a>
+            <a href="locator.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span class="text-xs">Locator</span>
+            </a>
+            <a href="expenses.html" class="nav-item active flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+                <span class="text-xs">Expenses</span>
+            </a>
+            <a href="notifications.html" class="nav-item flex flex-col items-center py-2 px-4">
+                <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM11 19H6.5A2.5 2.5 0 014 16.5v-9A2.5 2.5 0 016.5 5h11A2.5 2.5 0 0120 7.5v3.5"></path>
+                </svg>
+                <span class="text-xs">Alerts</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div id="add-expense-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-end justify-center min-h-screen">
+            <div class="bg-white rounded-t-lg w-full max-w-md p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Add Expense</h3>
+                    <button onclick="hideAddExpenseModal()" class="text-gray-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="expense-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-500">$</span>
+                            <input type="number" name="amount" class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="0.00" step="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <select name="category" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+                            <option value="">Select category</option>
+                            <option value="fuel">⛽ Fuel</option>
+                            <option value="maintenance">🔧 Maintenance</option>
+                            <option value="insurance">🛡️ Insurance</option>
+                            <option value="repairs">⚙️ Repairs</option>
+                            <option value="accessories">✨ Accessories</option>
+                            <option value="car_wash">🚗 Car Wash</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <input type="date" name="date" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                        <input type="text" name="description" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="e.g., Shell Station, Oil change">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-red-600 text-white p-3 rounded-lg font-medium">
+                        Add Expense
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+    <script>
+        let currentFilter = 'all';
+        let currentPeriod = 'month';
+
+        function changePeriod(period) {
+            currentPeriod = period;
+            
+            // Update period selector
+            document.querySelectorAll('.period-selector').forEach(btn => {
+                btn.classList.remove('active');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            event.target.classList.add('active');
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            
+            // Update charts and data
+            updateCharts();
+            updateExpenseList();
+        }
+
+        function filterExpenses(filter) {
+            currentFilter = filter;
+            
+            // Update filter chips
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.remove('active');
+                chip.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            event.target.classList.add('active');
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            
+            updateExpenseList();
+        }
+
+        function filterByCategory(category) {
+            filterExpenses(category);
+        }
+
+        function updateCharts() {
+            // Initialize overview chart
+            const overviewChart = echarts.init(document.getElementById('overview-chart'));
+            
+            const overviewOption = {
+                color: ['#D72638', '#C0C0C0', '#2ECC71', '#f59e0b', '#8b5cf6'],
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: ${c} ({d}%)'
+                },
+                series: [
+                    {
+                        name: 'Expenses',
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 4,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        },
+                        label: {
+                            show: false
+                        },
+                        emphasis: {
+                            label: {
+                                show: true,
+                                fontSize: '12',
+                                fontWeight: 'bold'
+                            }
+                        },
+                        data: [
+                            {value: 245, name: 'Fuel'},
+                            {value: 180, name: 'Maintenance'},
+                            {value: 95, name: 'Insurance'},
+                            {value: 45, name: 'Repairs'},
+                            {value: 25, name: 'Accessories'}
+                        ]
+                    }
+                ]
+            };
+            
+            overviewChart.setOption(overviewOption);
+            
+            // Initialize trend chart
+            const trendChart = echarts.init(document.getElementById('trend-chart'));
+            
+            const trendOption = {
+                color: ['#D72638'],
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: 'Week {b}: ${c}'
+                },
+                xAxis: {
+                    type: 'category',
+                    data: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    axisLine: {
+                        lineStyle: {
+                            color: '#e5e7eb'
+                        }
+                    },
+                    axisLabel: {
+                        color: '#6b7280',
+                        fontSize: 12
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLine: {
+                        show: false
+                    },
+                    axisTick: {
+                        show: false
+                    },
+                    axisLabel: {
+                        color: '#6b7280',
+                        fontSize: 12,
+                        formatter: '${value}'
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: '#f3f4f6'
+                        }
+                    }
+                },
+                series: [
+                    {
+                        name: 'Spending',
+                        data: [120, 200, 150, 180],
+                        type: 'line',
+                        smooth: true,
+                        lineStyle: {
+                            width: 3
+                        },
+                        itemStyle: {
+                            borderWidth: 3,
+                            borderColor: '#fff'
+                        },
+                        areaStyle: {
+                            opacity: 0.1
+                        }
+                    }
+                ]
+            };
+            
+            trendChart.setOption(trendOption);
+        }
+
+        function updateExpenseList() {
+            const container = document.getElementById('expense-list');
+            container.innerHTML = '';
+            
+            let filteredExpenses = CarCareApp.expenses;
+            
+            if (currentFilter !== 'all') {
+                filteredExpenses = CarCareApp.expenses.filter(expense => expense.category === currentFilter);
+            }
+            
+            filteredExpenses.forEach((expense, index) => {
+                const expenseItem = document.createElement('div');
+                expenseItem.className = 'expense-item p-4 cursor-pointer';
+                expenseItem.onclick = () => showExpenseDetails(expense);
+                
+                const categoryIcons = {
+                    'fuel': '⛽',
+                    'maintenance': '🔧',
+                    'insurance': '🛡️',
+                    'repairs': '⚙️',
+                    'accessories': '✨',
+                    'car_wash': '🚗'
+                };
+                
+                expenseItem.innerHTML = `
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-xl">
+                            ${categoryIcons[expense.category] || '📋'}
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800 capitalize">${expense.category.replace('_', ' ')}</div>
+                            <div class="text-sm text-gray-500">${expense.description || 'No description'}</div>
+                            <div class="text-xs text-gray-400">${Utils.formatDate(expense.date)}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-lg text-gray-800">$${expense.amount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(expenseItem);
+            });
+            
+            // Animate expense items
+            setTimeout(() => {
+                Animations.staggerCards('.expense-item');
+            }, 100);
+        }
+
+        function showExpenseDetails(expense) {
+            const categoryIcons = {
+                'fuel': '⛽',
+                'maintenance': '🔧',
+                'insurance': '🛡️',
+                'repairs': '⚙️',
+                'accessories': '✨',
+                'car_wash': '🚗'
+            };
+            
+            alert(`${categoryIcons[expense.category]} ${expense.category.toUpperCase()}\nAmount: $${expense.amount.toFixed(2)}\nDate: ${Utils.formatDate(expense.date)}\nDescription: ${expense.description || 'No description'}\n\nTap and hold to edit or delete.`);
+        }
+
+        function showAddExpenseModal() {
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelector('input[name="date"]').value = today;
+            
+            Utils.showModal('add-expense-modal');
+        }
+
+        function hideAddExpenseModal() {
+            Utils.hideModal('add-expense-modal');
+            document.getElementById('expense-form').reset();
+        }
+
+        function exportData() {
+            const csvContent = "data:text/csv;charset=utf-8," + 
+                "Date,Category,Amount,Description\n" +
+                CarCareApp.expenses.map(expense => 
+                    `${expense.date},${expense.category},${expense.amount},"${expense.description || ''}"`
+                ).join("\n");
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "carcare_expenses.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            Utils.showToast('Expenses exported successfully!', 'success');
+        }
+
+        function toggleCategoryView() {
+            Utils.showToast('Full category view coming soon!', 'info');
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        // Handle expense form submission
+        document.getElementById('expense-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const expenseData = {
+                amount: parseFloat(formData.get('amount')),
+                category: formData.get('category'),
+                date: formData.get('date'),
+                description: formData.get('description')
+            };
+            
+            // Validate expense
+            const errors = Forms.validateExpense(expenseData);
+            if (errors.length > 0) {
+                Utils.showToast(errors[0], 'error');
+                return;
+            }
+            
+            // Add expense
+            const newExpense = {
+                id: Date.now(),
+                ...expenseData
+            };
+            
+            CarCareApp.expenses.unshift(newExpense);
+            
+            // Update UI
+            updateExpenseList();
+            updateCharts();
+            
+            // Hide modal
+            hideAddExpenseModal();
+            
+            Utils.showToast('Expense added successfully!', 'success');
+        });
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCharts();
+            updateExpenseList();
+            
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelector('input[name="date"]').value = today;
+        });
+    </script>
+</body>
+</html>
